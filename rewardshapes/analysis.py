@@ -32,11 +32,11 @@ def mean_ci(x):
     return m, float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))
 
 
-def curves(rows, study, fb, metric, labeler=None, beta=1.0):
+def curves(rows, study, fb, metric, labeler=None, beta=1.0, shapes=E.SHAPES, n_grid=N_GRID):
     out = {}
-    for shape in E.SHAPES:
+    for shape in shapes:
         pts = []
-        for n in N_GRID:
+        for n in n_grid:
             xs = [r[metric] for r in rows if r["study"] == study and r["shape"] == shape
                   and r["feedback"] == fb and r["n"] == n]
             m, lo, hi = mean_ci(xs)

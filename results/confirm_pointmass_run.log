@@ -1,0 +1,64 @@
+2026-10-21 13:05:07,966 pointmass: 50/600 (187s)
+2026-10-21 13:06:56,497 pointmass: 100/600 (295s)
+2026-10-21 13:07:39,508 pointmass: 150/600 (338s)
+2026-10-21 13:08:54,603 pointmass: 200/600 (413s)
+2026-10-21 13:09:34,185 pointmass: 250/600 (453s)
+2026-10-21 13:10:28,538 pointmass: 300/600 (507s)
+2026-10-21 13:11:41,453 pointmass: 350/600 (580s)
+2026-10-21 13:12:14,283 pointmass: 400/600 (613s)
+2026-10-21 13:13:31,456 pointmass: 450/600 (690s)
+2026-10-21 13:13:49,101 pointmass: 500/600 (708s)
+2026-10-21 13:14:08,642 pointmass: 550/600 (727s)
+2026-10-21 13:14:25,669 pointmass: 600/600 (744s)
+2026-10-21 13:14:26,034 pointmass: 600 jobs in 745s -> /Users/amalmehta/Desktop/Amals Work/2026/2026_projects/reward_modeling/results/confirm/pointmass/recovery.jsonl
+2026-10-21 13:14:30,349 summary -> /Users/amalmehta/Desktop/Amals Work/2026/2026_projects/reward_modeling/results/summary_pointmass.json
+2026-10-21 13:14:36,284 figure -> /Users/amalmehta/Desktop/Amals Work/2026/2026_projects/reward_modeling/figures/fig7_pointmass.png
+{
+ "n_star": {
+  "prefs": {
+   "sparse": 300,
+   "dense": 300,
+   "shaped": 1000,
+   "distractor": 1000
+  },
+  "demos": {
+   "sparse": 1,
+   "dense": 30,
+   "shaped": 10,
+   "distractor": 30
+  }
+ },
+ "epic_floor": {
+  "sparse": 0.37979193946394024,
+  "dense": 0.011651329081535239,
+  "shaped": 0.37979193946394024,
+  "distractor": 0.00822712097318841
+ },
+ "C1": {
+  "regret_distractor": 0.0006999601595965058,
+  "epic_distractor": 0.3866142632239956,
+  "epic_dense": 0.06118910852339077,
+  "supported": true
+ },
+ "C2": {
+  "n_star_prefs": {
+   "sparse": 300,
+   "dense": 300,
+   "shaped": 1000,
+   "distractor": 1000
+  },
+  "ratio_sparse_dense": 1.0,
+  "supported": false
+ },
+ "C3": {
+  "prefs": {
+   "epic_sparse": 0.47378974378494015,
+   "epic_shaped": 0.4841641247078555
+  },
+  "demos": {
+   "epic_sparse": 0.5038416634213291,
+   "epic_shaped": 0.5619727202351006
+  },
+  "supported": false
+ }
+}

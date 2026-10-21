@@ -244,7 +244,48 @@ act on it, and which distance metric tells you that?
 - Website "smooth": every control updates the view in under 100 ms (all data preloaded, no
   network on interaction); transitions 150–250 ms; light and dark themes.
 
-Deferred (not in v1): 16×16 scaling check; classic control; text/LLM reward models; neural
+Point-mass extension (decided 2026-10-21; every setting in configs/pointmass.toml):
+- Question: do the gridworld's recovery results hold in a continuous-state environment
+  where the reward model is linear in generic state features, rather than tabular and well specified?
+- Environment: 2D point mass on Gymnasium (`rewardshapes/PointMass-v0`). State (x, y, d) in
+  [-1, 1]^3. Nine discrete actions (stay, or a 0.1 step in one of 8 headings; like
+  MountainCar-v0, the actions are discrete), Gaussian position noise σ = 0.02, the box edges clip.
+  d is an uncontrollable distractor, d' = clip(0.9 d + 0.3 ε). Continuing task, γ = 0.95,
+  feedback horizon H = 40, uniform starts. Velocity-controlled point mass with no inertia (a
+  simplification).
+- Reward families R(s,a,s') = f(s) + g(s'), each rescaled to unit std over feasible transitions:
+  sparse = 1[‖p'−goal‖ ≤ 0.15], goal (0.6, 0.6); dense = −‖p'−goal‖; shaped = sparse +
+  γΦ(s') − Φ(s), with Φ = −10‖p−goal‖; distractor = dense + c·d', where c gives both terms
+  equal variance over coverage.
+- Same interface: the experiment-facing Task exposes T, gamma and horizon through a
+  planning model, a 25×25 lattice whose transition rows are bilinear-interpolation weights of
+  8 simulator samples per (node, action) (an "averager", for which value iteration converges). The
+  gridworld's planning code runs on it unchanged. Because every reward is additive in d and d
+  is exogenous, policies do not depend on d, so the lattice can leave d out exactly.
+- Expert ("simple trained policy"): soft-optimal (temperature 1) finite-horizon policy from
+  value iteration on simulator samples, acting on interpolated logits.
+  Preferences: the gridworld's protocol (ε-mixture around the greedy-optimal policy, shared
+  starts, Boltzmann β = 1 on γ-discounted true returns).
+- Reward model: linear, R_θ = θ_u·ψ(s) + θ_v·ψ(s'), with ψ = 7×7 Gaussian RBFs on
+  position (width 0.333) plus d, giving 100 parameters. The model is misspecified for sparse and
+  shaped (the RBFs cannot represent a disk of radius 0.15), so the summary reports each shape's
+  EPIC floor: the EPIC of the least-squares best reward in the class.
+  Fitting: Bradley–Terry (L-BFGS, L2 1e-3), and MaxEnt IRL as exact likelihood through
+  finite-horizon soft value iteration on the lattice.
+- Metrics: normalized regret as in the gridworld, but J is Monte Carlo (1000 rollouts × 100
+  steps, with fixed starts and noise shared by every policy), and π* is the planner's greedy policy
+  on the true reward (so regret can be slightly negative). EPIC with uniform D_S, D_A: for
+  f(s) + g(s') rewards the canonical reward is (g + γf)(s') + const, so EPIC is a Pearson
+  distance over 65,536 fixed uniform states. Raw Pearson over 65,536 fixed coverage transitions.
+- Grid: N ∈ {1, 3, 10, 30, 100, 300, 1000}; prefs and demos; seeds 0–9 (pilot 100–104);
+  random-θ control. Command: `uv run python -m rewardshapes.pointmass_run`.
+- Hypotheses (stated before the confirmatory run):
+  C1: on distractor, demonstrations at N = 1000 reach mean regret ≤ 0.05 while mean EPIC ≥
+      (dense demos' EPIC at N = 1000) + 0.15, because demos carry no information about c.
+  C2: N*_prefs(sparse) ≥ 3 × N*_prefs(dense) (">1000" counts as 10,000).
+  C3: at N = 1000, |EPIC(shaped) − EPIC(sparse)| ≤ 0.05 for both feedback types.
+
+Deferred (not in v1): 16×16 scaling check; classic control (now partly done: point mass); text/LLM reward models; neural
 (non-tabular) reward models; real human labels; dynamics-aware metrics (DARD); a Mac app
 (the deliverable is a paper plus a static site, so none was built); a feedback/settings tab
 beyond a feedback link and a theme toggle.
@@ -257,6 +298,14 @@ H2 supported (Spearman with regret: EPIC 0.61 vs raw Pearson 0.54, difference CI
 and the worst shapes are lava and shaped). Unexplained: preference regret is non-monotone in N for dense
 and shaped, and myopic-labeler regret is U-shaped (lowest near N = 10). An exploratory check ruled out
 the optimizer and the action term w(s,a) as causes.
+
+Point-mass outcomes (confirmatory run, seeds 0–9, 2026-10-21; results/summary_pointmass.json):
+C1 supported (distractor demos at N = 1000: regret 0.001, EPIC 0.387, which is the value an unidentified weight on d
+predicts; dense demos EPIC 0.061). C2 not supported (N*_prefs: sparse = dense = 300; shaped and distractor 1000).
+C3 not supported: it holds for preferences (EPIC 0.474 vs 0.484) but not for demos (0.504 vs 0.562). Also
+seen: demos recover sparse at N = 1, far sooner than preferences. EPIC stays at or above 0.5 for sparse and shaped even
+at regret 0, above the feature floor of 0.38, so EPIC and regret disagree whenever the model is misspecified. Raw Pearson is
+fooled by shaping (prefs, N = 1000: 0.71 vs EPIC 0.48). Pilot (seeds 100–104) changed nothing.
 
 - Assumed the website counts as a document companion, not an application. So: a GitHub-issues
   feedback link and a light/dark toggle instead of a full settings tab, and an SVG favicon
@@ -274,6 +323,7 @@ CHANGELOG:
 - 2026-10-20 — created
 - 2026-10-20 — filled DEFINITIONS AND DEFERRED and OPEN QUESTIONS from the question rounds; started the build
 - 2026-10-20 — after the pilot: discounted labeler with shared starts, N grid down to 1, overopt and β N values moved; bootstrap CIs; recorded the confirmatory outcomes; built the site, paper and docs
+- 2026-10-21 — point-mass extension: decisions and hypotheses C1–C3 recorded before running; confirmatory run and outcomes recorded
 - 2026-09-15 — added meta-instruction: built-out applications include a small feedback tab
 - 2026-09-15 — added meta-instruction: no "Claude" attribution in commits, PRs, or branches
 - 2026-09-16 — added meta-instruction: always include a README when adding to GitHub

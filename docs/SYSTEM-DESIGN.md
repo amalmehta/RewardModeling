@@ -40,7 +40,46 @@ flowchart LR
 | `analysis.py` | 95% t-intervals over seeds, N* (the first N with mean regret ≤ 0.05), Spearman correlations with a seed-cluster bootstrap, and the hypothesis verdicts. Writes the summary, the paper macros and the site data. |
 | `figures.py` | Matplotlib figures for the paper, using the validated palette. |
 | `run_all.py` | The one command that regenerates everything. |
+| `pointmass.py` | Point-mass extension: the Gymnasium env (`rewardshapes/PointMass-v0`), the batched dynamics it shares with the experiments, four reward families as `f(s) + g(s')`, RBF features, the `Task` (planning lattice behind `T`, plus fixed metric and evaluation samples), rollouts, feedback, sampled EPIC and raw Pearson. |
+| `pointmass_run.py` | Point-mass jobs, runner, summary (`C1`–`C3` verdicts) and figure, all driven by `configs/pointmass.toml`. |
 | `site/` | Static page: the explorer, verdict cards, SVG line charts with crosshair tooltips, tables, light/dark themes. |
+
+## Point-mass extension
+
+```mermaid
+flowchart LR
+  cfg[("configs/pointmass.toml")] --> task
+  subgraph pm["pointmass.py"]
+    gym["PointMassEnv<br/>(Gymnasium)"] -.same step().-> sim["batched step()"]
+    sim --> task["Task: 25×25 lattice T<br/>(interpolated samples),<br/>metric + eval samples"]
+  end
+  task --> plan["planning.py<br/>(shared, size-generic)"]
+  plan --> fbk["prefs / expert demos<br/>in the continuous sim"]
+  fbk --> fit["learn.py<br/>Bradley–Terry, MaxEnt<br/>(linear θ·ψ)"]
+  fit --> ev["regret (Monte Carlo),<br/>EPIC, raw Pearson"]
+  ev --> raw2[("results/confirm/pointmass/recovery.jsonl")]
+  raw2 --> sum2[("results/summary_pointmass.json")]
+  sum2 --> fig7[("figures/fig7_pointmass")]
+```
+
+- **Same interface, different backing.** `Task` exposes `T`, `gamma` and `horizon`, so `planning.q_optimal`
+  and `finite_horizon_soft_logpolicy` run unchanged. `T` is a `LatticeT`, a sparse CSR with about 8
+  nonzeros per row that supports `k * T`, `T @ V` and `len(T)`. A dense `T` would be 28 MB and made
+  value iteration memory-bound (6 s, against about 0.1 s sparse). The gridworld numbers are bit-identical
+  after the refactor: committed rows were recomputed and compared.
+- **The lattice is only for planning.** Feedback, returns and both metrics use the continuous
+  simulator. The policy at a continuous state acts on bilinearly interpolated Q-values (or log-policies)
+  from the lattice. MaxEnt's likelihood interpolates the same way, so the demonstrator and the model agree.
+- **d is left out of the lattice exactly.** Every reward is additive in d and d is exogenous, so
+  Q-differences across actions do not depend on d. A test checks that dense and distractor give the
+  same greedy policy.
+- **EPIC in closed form over s'.** For `f(s) + g(s')` rewards the canonical reward is `(g + γf)(s')`
+  plus a constant. A test checks this against the definition computed by sampled expectations.
+- **Regret by Monte Carlo with common random numbers.** Every policy sees the same 1000 starts and
+  noise, so differences between policies are not sampling noise. π* is the planner's own optimum, so
+  regret can be slightly below 0.
+- **MaxEnt backward pass.** A custom autograd op runs scipy CSR `T V` forward and `Tᵀ g` backward
+  (torch.sparse was about 20× slower here).
 
 ## Main flows
 
@@ -97,9 +136,20 @@ give regret 0; shaping preserves the optimal policy; features reproduce discount
 follow the dynamics; Bradley–Terry and MaxEnt recover rewards with enough data; soft policies
 approach greedy; preference pairs share starts.
 
+Point mass: `tests/test_pointmass.py` (18 tests) covers: Gymnasium's env checker; the Gymnasium env and
+the batched dynamics give identical trajectories; lattice rows are distributions; the Task is
+deterministic; unit-std rewards; closed-form canonicalisation equals the sampled definition; EPIC
+ignores shaping (raw Pearson does not), is scale/shift invariant and symmetric, and gives 1 for
+negation; a constant reward gives EPIC √½ and regret ≈ 1; the true reward gives regret 0, and shaping
+keeps the policy; the distractor does not change the policy; features reproduce returns; preference
+pairs share starts; Bradley–Terry and MaxEnt recover the dense reward.
+
 ## Known limits
 
 - One small gridworld; the 16×16 scaling check is deferred.
+- Point mass: velocity-controlled (no inertia), with discrete actions; planning on a 25×25 lattice
+  (interpolation error). The linear RBF model cannot represent the sparse goal disk, so sparse and
+  shaped have an EPIC floor of 0.38 that no amount of data removes.
 - Simulated labelers: Boltzmann-rational, or myopic in one specific way. No human data.
 - The ε-greedy trajectory mixture is generous: many compared trajectories are near-optimal, which
   makes preference learning easier than with uninformed sampling.

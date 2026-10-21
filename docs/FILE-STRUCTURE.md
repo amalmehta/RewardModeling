@@ -14,13 +14,20 @@ reward_modeling/
 │   ├── experiments.py        every experiment grid; parallel runner (--pilot for tuning seeds)
 │   ├── analysis.py           statistics, hypothesis verdicts, paper numbers, site data
 │   ├── figures.py            paper figures
-│   └── run_all.py            one command regenerates everything
+│   ├── run_all.py            one command regenerates everything (gridworld)
+│   ├── pointmass.py          point-mass Gymnasium env, reward families, planning lattice, metrics
+│   └── pointmass_run.py      point-mass experiments, summary, figure (one command)
+├── configs/pointmass.toml    every setting and seed of the point-mass run
 ├── tests/test_core.py        unit tests for the behaviour that matters
+├── tests/test_pointmass.py   unit tests for the point-mass extension
 ├── results/
 │   ├── confirm/*.jsonl       raw confirmatory runs (seeds 0–9)
+│   ├── confirm/pointmass/recovery.jsonl   point-mass raw runs (seeds 0–9)
 │   ├── summary.json          every aggregate and verdict
+│   ├── summary_pointmass.json   point-mass aggregates and C1–C3 verdicts
+│   ├── confirm_pointmass_run.log   log of the point-mass run
 │   └── confirm_run.log       log of the confirmatory run
-├── figures/                  fig1–fig6 as PDF (paper) and PNG (README)
+├── figures/                  fig1–fig6 as PDF (paper) and PNG (README); fig7 = point mass
 ├── paper/
 │   ├── main.tex              the paper
 │   ├── refs.bib              verified references

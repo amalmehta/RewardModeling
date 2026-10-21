@@ -48,16 +48,21 @@ def fit_preferences(traj1, traj2, y, discount, l2=1e-3, beta=1.0, max_iter=300):
     The model assumes the labeler discounts by `discount` (the task's gamma): under the
     myopic-labeler ablation this assumption is deliberately wrong.
     """
-    d = torch.tensor(trajectory_features(*traj1, discount) - trajectory_features(*traj2, discount))
-    yt = torch.tensor(y)
-    theta = torch.zeros(N_PARAMS, dtype=torch.float64, requires_grad=True)
+    d = trajectory_features(*traj1, discount) - trajectory_features(*traj2, discount)
+    return theta_to_table(fit_bradley_terry(d, y, l2, beta, max_iter))
+
+
+def fit_bradley_terry(d, y, l2=1e-3, beta=1.0, max_iter=300):
+    """theta maximising the Bradley-Terry likelihood, given feature differences d = phi1 - phi2."""
+    d, yt = torch.tensor(d), torch.tensor(y)
+    theta = torch.zeros(d.shape[1], dtype=torch.float64, requires_grad=True)
 
     def loss():
         logits = beta * (d @ theta)
         nll = torch.nn.functional.binary_cross_entropy_with_logits(logits, yt)
         return nll + l2 * (theta ** 2).sum()
 
-    return theta_to_table(_lbfgs(loss, theta, max_iter))
+    return _lbfgs(loss, theta, max_iter)
 
 
 def fit_maxent(S, A, env, l2=1e-3, max_iter=200):
@@ -82,6 +87,51 @@ def fit_maxent(S, A, env, l2=1e-3, max_iter=200):
         return -ll / len(S) + l2 * (theta ** 2).sum()
 
     return theta_to_table(_lbfgs(loss, theta, max_iter))
+
+
+class _SparseMatVec(torch.autograd.Function):
+    """y = T V with a scipy CSR matrix; the backward pass is T^T grad (V is the only input)."""
+
+    @staticmethod
+    def forward(ctx, V, T, Tt):
+        ctx.Tt = Tt
+        return torch.from_numpy(T @ V.detach().numpy())
+
+    @staticmethod
+    def backward(ctx, grad):
+        return torch.from_numpy(ctx.Tt @ grad.numpy()), None, None
+
+
+def fit_maxent_linear(S, A, task, l2=1e-3, max_iter=200):
+    """MaxEnt IRL for the point mass's linear reward theta_u . psi(s) + theta_v . psi(s').
+
+    The same maximum likelihood as fit_maxent: finite-horizon soft value iteration, here on
+    the task's planning lattice, with each continuous demo state's action logits
+    interpolated from the lattice (as the demonstrator's are).
+    """
+    psi, psi_next = (torch.tensor(x) for x in task.lattice_features)
+    n, K = psi.shape
+    n_act = psi_next.shape[1]
+    T, Tt = task.T.csr, task.T.csr.T.tocsr()
+    H = task.horizon
+    idx, w = task.interp(S[:, :-1])  # (N, H, 4)
+    flat = torch.tensor(idx + n * np.arange(H)[None, :, None])
+    w, At = torch.tensor(w), torch.tensor(A)
+    theta = torch.zeros(2 * K, dtype=torch.float64, requires_grad=True)
+
+    def loss():
+        r = (psi @ theta[:K])[:, None] + psi_next @ theta[K:]
+        V = torch.zeros(n, dtype=torch.float64)
+        logpis = [None] * H
+        for t in reversed(range(H)):
+            Q = r + task.gamma * _SparseMatVec.apply(V, T, Tt).view(n, n_act)
+            V = torch.logsumexp(Q, 1)
+            logpis[t] = Q - V[:, None]
+        z = (w[..., None] * torch.cat(logpis)[flat]).sum(2)  # (N, H, A)
+        ll = torch.log_softmax(z, -1).gather(-1, At[..., None]).sum()
+        return -ll / len(S) + l2 * (theta ** 2).sum()
+
+    return _lbfgs(loss, theta, max_iter)
 
 
 def random_reward(rng):

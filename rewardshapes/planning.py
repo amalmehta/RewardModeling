@@ -1,4 +1,9 @@
-"""Exact tabular planning: value iteration, policy evaluation, soft policies."""
+"""Exact tabular planning: value iteration, policy evaluation, soft policies.
+
+Every function takes an env with a transition tensor env.T[s, a, s'] and a reward that is
+either a table R[s, a, s'] or an expected reward r[s, a]; sizes come from env.T, so the
+gridworld and the point mass's planning model share this code.
+"""
 import numpy as np
 from scipy.special import logsumexp
 
@@ -6,13 +11,15 @@ from .env import N_STATES
 
 
 def expected_reward(R, T):
-    """r(s, a) = sum_s' T(s'|s,a) R(s,a,s')."""
+    """r(s, a) = sum_s' T(s'|s,a) R(s,a,s'); an (S, A) reward is already r(s, a)."""
+    if R.ndim == 2:
+        return R
     return (T * R).sum(-1)
 
 
 def q_optimal(R, env, tol=1e-10, max_iter=5000):
     r = expected_reward(R, env.T)
-    V = np.zeros(N_STATES)
+    V = np.zeros(len(env.T))
     for _ in range(max_iter):
         Q = r + env.gamma * env.T @ V
         V_new = Q.max(1)
@@ -31,7 +38,7 @@ def greedy_policy(Q, tie_tol=1e-8):
 def soft_policy(R, env, lam, tol=1e-9, max_iter=5000):
     """Infinite-horizon soft-optimal policy at inverse temperature lam."""
     r = expected_reward(R, env.T)
-    V = np.zeros(N_STATES)
+    V = np.zeros(len(env.T))
     for _ in range(max_iter):
         Q = r + env.gamma * env.T @ V
         V_new = logsumexp(lam * Q, axis=1) / lam
@@ -50,7 +57,7 @@ def policy_value(pi, R, env):
     r = expected_reward(R, env.T)
     r_pi = (pi * r).sum(1)
     P_pi = np.einsum("sa,sat->st", pi, env.T)
-    return np.linalg.solve(np.eye(N_STATES) - env.gamma * P_pi, r_pi)
+    return np.linalg.solve(np.eye(len(env.T)) - env.gamma * P_pi, r_pi)
 
 
 def J(pi, R, env):
@@ -58,8 +65,8 @@ def J(pi, R, env):
     return policy_value(pi, R, env).mean()
 
 
-def uniform_policy(n_actions=4):
-    return np.full((N_STATES, n_actions), 1.0 / n_actions)
+def uniform_policy(n_actions=4, n_states=N_STATES):
+    return np.full((n_states, n_actions), 1.0 / n_actions)
 
 
 def normalized_regret(pi, R_true, env, cache=None):
@@ -77,12 +84,17 @@ def regret_cache(R_true, env):
 
 def finite_horizon_soft_policy(R, env, horizon=None, temperature=1.0):
     """Time-indexed soft-optimal policy pi[t, s, a] for the discounted horizon-H task."""
+    return np.exp(finite_horizon_soft_logpolicy(R, env, horizon, temperature))
+
+
+def finite_horizon_soft_logpolicy(R, env, horizon=None, temperature=1.0):
+    """log pi[t, s, a] of finite_horizon_soft_policy (finite even where pi underflows)."""
     H = horizon or env.horizon
     r = expected_reward(R, env.T) / temperature
-    V = np.zeros(N_STATES)
-    pis = np.zeros((H,) + r.shape)
+    V = np.zeros(len(env.T))
+    logpis = np.zeros((H,) + r.shape)
     for t in reversed(range(H)):
         Q = r + env.gamma * env.T @ V
         V = logsumexp(Q, axis=1)
-        pis[t] = np.exp(Q - V[:, None])
-    return pis
+        logpis[t] = Q - V[:, None]
+    return logpis
