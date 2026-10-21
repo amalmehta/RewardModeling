@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/
+.DS_Store
+results/pilot/
+paper/*.aux
+paper/*.log
+paper/*.out
+*.egg-info/

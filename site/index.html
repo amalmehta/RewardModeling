@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reward Shapes</title>
+<meta name="description" content="How the shape of a reward changes how much feedback it takes to recover it: a gridworld study of preference learning and inverse RL.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script>try{var t=localStorage.getItem("rs-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#"><img src="icon.svg" alt="" width="24" height="24"> Reward Shapes</a>
+  <nav>
+    <a href="reward-shapes.pdf">Paper (PDF)</a>
+    <a href="https://github.com/amalmehta/RewardModeling">Code</a>
+    <button id="theme" class="ghost" type="button" aria-label="Switch light or dark theme" title="Theme">◐</button>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Workshop preprint · gridworld study · synthetic labelers</p>
+    <h1>What shape is a reward?</h1>
+    <p class="lede" id="abstract"></p>
+  </section>
+
+  <section class="card" id="explorer" aria-labelledby="ex-h">
+    <div class="card-head">
+      <h2 id="ex-h">Explorer: the true reward next to the learned one</h2>
+      <p class="muted">Pick a reward shape, a kind of feedback and how much of it. Colour is the reward for entering a cell; arrows are the greedy policy. Shown: seed 0.</p>
+    </div>
+    <div class="controls">
+      <div class="chips" id="shape-chips" role="radiogroup" aria-label="Reward shape"></div>
+      <div class="seg" id="fb-seg" role="radiogroup" aria-label="Feedback">
+        <button role="radio" data-v="prefs" aria-checked="true">Preferences</button>
+        <button role="radio" data-v="demos" aria-checked="false">Demonstrations</button>
+      </div>
+      <label class="slider">N = <output id="n-out">100</output>
+        <input id="n-in" type="range" min="0" max="6" step="1" value="4" aria-label="Amount of feedback">
+      </label>
+      <div class="seg" id="view-seg" role="radiogroup" aria-label="Reward view">
+        <button role="radio" data-v="map_canon" aria-checked="true" title="EPIC canonical form: shaping removed">Canonical</button>
+        <button role="radio" data-v="map_raw" aria-checked="false">Raw</button>
+      </div>
+    </div>
+    <div class="grids">
+      <figure><figcaption>True reward</figcaption><div class="grid" id="g-true"></div></figure>
+      <figure><figcaption>Learned reward</figcaption><div class="grid" id="g-learned"></div></figure>
+      <div class="stats" id="ex-stats"></div>
+    </div>
+    <div class="legend-row"><span class="ramp"></span><span class="muted">low → high reward (each map scaled to its own range) · ● goal · ◆ lava</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-h">
+    <div class="card-head"><h2 id="h-h">Hypotheses, stated before the confirmatory run</h2></div>
+    <div class="verdicts" id="verdicts"></div>
+  </section>
+
+  <section class="card" aria-labelledby="r-h">
+    <div class="card-head">
+      <h2 id="r-h">How much feedback until the reward is recovered?</h2>
+      <p class="muted">Mean over 10 seeds with 95% bootstrap intervals. Normalized regret: 0 is the optimal policy, 1 is acting uniformly at random. Dashed line: the 0.05 "recovered" threshold.</p>
+    </div>
+    <div class="controls">
+      <div class="seg" id="rc-fb" role="radiogroup" aria-label="Feedback">
+        <button role="radio" data-v="prefs" aria-checked="true">Preferences</button>
+        <button role="radio" data-v="demos" aria-checked="false">Demonstrations</button>
+      </div>
+      <button class="ghost small" id="rc-table-btn" type="button">Show table</button>
+    </div>
+    <div class="two">
+      <div class="chart" id="c-regret" aria-label="Regret against N"></div>
+      <div class="chart" id="c-epic" aria-label="EPIC distance against N"></div>
+    </div>
+    <div class="table-wrap" id="rc-table" hidden></div>
+  </section>
+
+  <section class="card" aria-labelledby="m-h">
+    <div class="card-head">
+      <h2 id="m-h">Which distance tells you the policy will be good?</h2>
+      <p class="muted">Spearman correlation between each distance and regret across all main runs (higher means more predictive). 95% intervals from a bootstrap over seeds.</p>
+    </div>
+    <div class="table-wrap" id="metric-table"></div>
+  </section>
+
+  <section class="card" aria-labelledby="a-h">
+    <div class="card-head"><h2 id="a-h">When the labeler is wrong</h2>
+      <p class="muted">Left: the labeler discounts by 0.8 while the model assumes 0.95 (a myopic labeler). Right: labeler rationality β at N = 300 pairs.</p></div>
+    <div class="two">
+      <div class="chart" id="c-myopic"></div>
+      <div class="chart" id="c-beta"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="o-h">
+    <div class="card-head"><h2 id="o-h">Optimizing a learned reward harder</h2>
+      <p class="muted">The soft-optimal policy for a learned (proxy) reward at increasing optimization pressure λ, scored on the true reward (1 = optimal). Proxies were learned from N preference pairs.</p></div>
+    <div class="controls"><div class="chips" id="oo-chips" role="radiogroup" aria-label="Reward shape"></div></div>
+    <div class="chart wide" id="c-overopt"></div>
+  </section>
+
+  <section class="card" aria-labelledby="s-h">
+    <div class="card-head"><h2 id="s-h">Does shaping speed up learning?</h2>
+      <p class="muted">Tabular Q-learning trained on each reward, always scored on the sparse task. Mean over 10 seeds.</p></div>
+    <div class="chart wide" id="c-shaping"></div>
+    <p class="muted small" id="shaping-note"></p>
+  </section>
+
+  <section class="card note" aria-labelledby="inv-h">
+    <h2 id="inv-h">What is invented here</h2>
+    <p>Everything on this page is computed from synthetic data. These are <strong>invented parameters</strong>, chosen by us rather than measured: the 8×8 layout, slip probability 0.1, γ = 0.95, horizon 20, the goal, lava and multi-goal values, the rescaling of every reward to unit spread, the labeler's rationality β = 1, the ε-greedy mixture that generates compared trajectories, and the demonstrator's temperature. The labelers are simulated, not people. Results describe this setting, not reward learning in general.</p>
+  </section>
+</main>
+
+<footer>
+  <span>Reward Shapes · <a href="https://github.com/amalmehta/RewardModeling">code</a> · <a href="reward-shapes.pdf">paper</a></span>
+  <a class="feedback" href="https://github.com/amalmehta/RewardModeling/issues/new?title=Feedback%20on%20Reward%20Shapes">Feedback</a>
+</footer>
+<div class="tip" id="tip" role="status" hidden></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

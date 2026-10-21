@@ -1,0 +1,18 @@
+2026-10-20 18:36:04,249 recovery: 100/1400 (279s)
+2026-10-20 18:39:05,092 recovery: 200/1400 (460s)
+2026-10-20 18:39:56,786 recovery: 300/1400 (512s)
+2026-10-20 18:41:31,040 recovery: 400/1400 (606s)
+2026-10-20 18:42:25,199 recovery: 500/1400 (660s)
+2026-10-20 18:42:56,884 recovery: 600/1400 (692s)
+2026-10-20 18:45:09,747 recovery: 700/1400 (825s)
+2026-10-20 18:45:35,929 recovery: 800/1400 (851s)
+2026-10-20 18:45:57,511 recovery: 900/1400 (873s)
+2026-10-20 18:46:09,790 recovery: 1000/1400 (885s)
+2026-10-20 18:46:55,142 recovery: 1100/1400 (930s)
+2026-10-20 18:47:36,807 recovery: 1200/1400 (972s)
+2026-10-20 18:47:54,205 recovery: 1300/1400 (989s)
+2026-10-20 18:48:02,001 recovery: 1400/1400 (997s)
+2026-10-20 18:48:02,045 recovery: 1400 jobs in 997s -> /Users/amalmehta/Desktop/Amals Work/2026/2026_projects/reward_modeling/results/confirm/recovery.jsonl
+2026-10-20 18:51:47,938 overopt: 100/150 (226s)
+2026-10-20 18:53:12,581 overopt: 150 jobs in 311s -> /Users/amalmehta/Desktop/Amals Work/2026/2026_projects/reward_modeling/results/confirm/overopt.jsonl
+2026-10-20 19:04:19,858 shaping: 30 jobs in 667s -> /Users/amalmehta/Desktop/Amals Work/2026/2026_projects/reward_modeling/results/confirm/shaping.jsonl
